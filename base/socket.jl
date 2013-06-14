@@ -247,14 +247,15 @@ type TcpSocket <: Socket
     closenotify::Condition
     TcpSocket(handle,open)=new(handle,open,true,PipeBuffer(),false,
                                Condition(),false,Condition(),false,Condition())
-
     function TcpSocket()
         this = TcpSocket(C_NULL,false)
-        this.handle = ccall(:jl_make_tcp,Ptr{Void},(Ptr{Void},Any),
-                           eventloop(),this)
-        if (this.handle == C_NULL)
-            throw(UVError("Failed to create socket"))
+        this.handle = c_malloc(_sizeof_uv_tcp)
+        err = ccall(:uv_tcp_init,Int32,(Ptr{Void},Ptr{Void}),eventloop(),this.handle)
+        if err == -1
+            c_free(this.handle)
+            throw(UVError("Failed to initialize TcpSocket"))
         end
+        associate_julia_struct(this.handle,this)
         this
     end
 end
@@ -270,11 +271,13 @@ type TcpServer <: UVServer
 
     function TcpServer()
         this = TcpServer(C_NULL,false)
-        this.handle = ccall(:jl_make_tcp,Ptr{Void},(Ptr{Void},Any),
-                           eventloop(),this)
-        if (this.handle == C_NULL)
-            throw(UVError("Failed to create socket server"))
+        this.handle = c_malloc(_sizeof_uv_tcp)
+        err = ccall(:uv_tcp_init,Int32,(Ptr{Void},Ptr{Void}),eventloop(),this.handle)
+        if err == -1
+            c_free(this.handle)
+            throw(UVError("Failed to initialize TcpServer"))
         end
+        associate_julia_struct(this.handle,this)
         this
     end
 end
