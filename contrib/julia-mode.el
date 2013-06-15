@@ -247,4 +247,64 @@
   (setq mode-name "julia")
   (run-hooks 'julia-mode-hook))
 
+;; Inferior julia
+
+(require 'comint)
+
+(defcustom inferior-julia-buffer "*julia*" "Name for the inferior-julia buffer.
+Note that this should be surrounded by *s in order to work properly")
+(defcustom inferior-julia-program nil "Path to your julia executable")
+;;(setq inferior-julia-program "~/julia/usr/bin/julia-release-basic")
+
+(defun run-inferior-julia ()
+  (interactive)
+  (if (not (comint-check-proc inferior-julia-buffer))
+      (progn
+	(funcall 'make-comint 
+		 (replace-regexp-in-string "\\*" "" inferior-julia-buffer) 
+		 (expand-file-name inferior-julia-program))
+	(pop-to-buffer inferior-julia-buffer))
+    (pop-to-buffer inferior-julia-buffer)))
+
+;;;###autoload
+(defun inferior-julia-send-region-directly (start end)
+  (interactive "r")
+  (comint-send-region inferior-julia-buffer start end)
+  ;; it seems like there should be a better way to do this
+  (comint-send-string inferior-julia-buffer "\n"))
+
+;;;###autoload
+(defun inferior-julia-send-line-directly ()
+  (interactive)
+  (comint-send-string inferior-julia-buffer 
+		      (buffer-substring (line-beginning-position)
+					(line-end-position nil)))
+  (comint-send-string inferior-julia-buffer "\n"))
+
+(defun inferior-julia-send-region (start end)
+  (interactive "r")
+  (setq string-to-send (buffer-substring start end))
+    ;; split region into lines, filtering out empty lines
+  (setq lines-to-send (split-string string-to-send "\n" t))
+  (with-current-buffer inferior-julia-buffer
+    (goto-char (point-max))
+    (map 'list (lambda (s)
+		 (insert s)
+		 (comint-send-input))
+	 lines-to-send)))
+
+(defun inferior-julia-send-line ()
+  (interactive)
+  (setq line-to-send (buffer-substring (line-beginning-position)
+				       (line-end-position)))
+  (with-current-buffer inferior-julia-buffer
+    (goto-char (point-max))
+    (insert line-to-send)
+    (comint-send-input)))
+
+(defun inferior-send-line-or-region
+  (
+
 (provide 'julia-mode)
+
+;;; julia-mode.el ends here
