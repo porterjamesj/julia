@@ -248,15 +248,20 @@
   (run-hooks 'julia-mode-hook))
 
 ;; Inferior julia
+;; Inspired by inferior-ghci and isend-mode
 
 (require 'comint)
 
 (defcustom inferior-julia-buffer "*julia*" "Name for the inferior-julia buffer.
 Note that this should be surrounded by *s in order to work properly")
 (defcustom inferior-julia-program nil "Path to your julia executable")
-;;(setq inferior-julia-program "~/julia/usr/bin/julia-release-basic")
+(defcustom inferior-julia-load-command nil "Julia command to run after a file is loaded.")
 
 (defun run-inferior-julia ()
+  "Runs a julia REPL as an inferior process via comint-mode. The variable
+   inferior-julia-program must be the path to your julia executable. IMPORTANT:
+   you must use the julia-release-basic executable, as comint and the readline
+   julia REPL do not play nicely together."
   (interactive)
   (if (not (comint-check-proc inferior-julia-buffer))
       (progn
@@ -266,25 +271,8 @@ Note that this should be surrounded by *s in order to work properly")
 	(pop-to-buffer inferior-julia-buffer))
     (pop-to-buffer inferior-julia-buffer)))
 
-;;;###autoload
-(defun inferior-julia-send-region-directly (start end)
-  (interactive "r")
-  (comint-send-region inferior-julia-buffer start end)
-  ;; it seems like there should be a better way to do this
-  (comint-send-string inferior-julia-buffer "\n"))
-
-;;;###autoload
-(defun inferior-julia-send-line-directly ()
-  (interactive)
-  (comint-send-string inferior-julia-buffer 
-		      (buffer-substring (line-beginning-position)
-					(line-end-position nil)))
-  (comint-send-string inferior-julia-buffer "\n"))
-
-(defun inferior-julia-send-region (start end)
-  (interactive "r")
-  (setq string-to-send (buffer-substring start end))
-    ;; split region into lines, filtering out empty lines
+(defun inferior-julia-send-string (string-to-send)
+  "Send a string to the inferior julia process, one line at a time."
   (setq lines-to-send (split-string string-to-send "\n" t))
   (with-current-buffer inferior-julia-buffer
     (goto-char (point-max))
@@ -293,17 +281,31 @@ Note that this should be surrounded by *s in order to work properly")
 		 (comint-send-input))
 	 lines-to-send)))
 
-(defun inferior-julia-send-line ()
+(defun inferior-julia-send-line-or-region ()
+  "If the region is active, send it to the inferior julia REPL, otherwise
+   send the line."
   (interactive)
-  (setq line-to-send (buffer-substring (line-beginning-position)
-				       (line-end-position)))
-  (with-current-buffer inferior-julia-buffer
-    (goto-char (point-max))
-    (insert line-to-send)
-    (comint-send-input)))
+  (if (region-active-p)
+      (inferior-julia-send-string (buffer-substring (region-beginning)
+						     (region-end)))
+    (inferior-julia-send-string (buffer-substring (line-beginning-position)
+						 (line-end-position)))))
 
-(defun inferior-send-line-or-region
-  (
+(defun inferior-julia-reload-buffer (cd)
+  "Calls julia's reload command on the current buffer.
+   If prefix arg cd is non-nil, change directories to the directory in which
+   the buffer's file resides. If inferior-julia-load-command is set, run this
+   command after reloading"
+  (interactive "P")
+  (let ((file (buffer-file-name))
+	(dir (expand-file-name default-directory)))
+    (with-current-buffer inferior-julia-buffer
+      (goto-char (point-max))
+      (inferior-julia-send-string (concat "reload(\"" file "\")\n"))
+      ;; change directories if necessary
+      (if cd (inferior-julia-send-string (concat "cd(\"" dir "\")")))
+      (if inferior-julia-load-command 
+	  (inferior-julia-send-string inferior-julia-load-command)))))
 
 (provide 'julia-mode)
 
