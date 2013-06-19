@@ -248,16 +248,16 @@
   (run-hooks 'julia-mode-hook))
 
 ;; Inferior julia
-;; Inspired by inferior-ghci and isend-mode
+;; Heavily inspired by inferior-ghci and isend-mode
 
 (require 'comint)
 
 (defcustom inferior-julia-buffer "*julia*" "Name for the inferior-julia buffer.
 Note that this should be surrounded by *s in order to work properly")
 (defcustom inferior-julia-program nil "Path to your julia executable")
-(defcustom inferior-julia-load-command nil "Julia command to run after a file is loaded.")
+(defcustom inferior-julia-load-command nil "Julia command to run after a file is reloaded.")
 
-(defun run-inferior-julia ()
+(defun inferior-julia-run ()
   "Runs a julia REPL as an inferior process via comint-mode. The variable
    inferior-julia-program must be the path to your julia executable. IMPORTANT:
    you must use the julia-release-basic executable, as comint and the readline
@@ -271,15 +271,13 @@ Note that this should be surrounded by *s in order to work properly")
 	(pop-to-buffer inferior-julia-buffer))
     (pop-to-buffer inferior-julia-buffer)))
 
-(defun inferior-julia-send-string (string-to-send)
+(defun inferior-julia-send-string (s)
   "Send a string to the inferior julia process, one line at a time."
-  (setq lines-to-send (split-string string-to-send "\n" t))
+  (setq stripped (mapconcat 'identity (split-string s "\n" t) "\n"))
   (with-current-buffer inferior-julia-buffer
     (goto-char (point-max))
-    (map 'list (lambda (s)
-		 (insert s)
-		 (comint-send-input))
-	 lines-to-send)))
+    (insert stripped)
+    (comint-send-input)))
 
 (defun inferior-julia-send-line-or-region ()
   "If the region is active, send it to the inferior julia REPL, otherwise
