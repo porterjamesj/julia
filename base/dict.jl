@@ -327,6 +327,8 @@ Dict() = Dict{Any,Any}()
 Dict{K,V}(ks::AbstractArray{K}, vs::AbstractArray{V}) = Dict{K,V}(ks,vs)
 Dict(ks, vs) = Dict{Any,Any}(ks, vs)
 
+convert{Q,R,S,T}(::Type{Dict{Q,R}},d::Dict{S,T}) = Dict{Q,R}(d)
+
 # syntax entry points
 Dict{K,V}(ks::(K...), vs::(V...)) = Dict{K  ,V  }(ks, vs)
 Dict{K  }(ks::(K...), vs::Tuple ) = Dict{K  ,Any}(ks, vs)
