@@ -172,6 +172,15 @@ for (fname, felt) in ((:zeros,:zero), (:ones,:one))
     end
 end
 
+for (fname, felt) in ((:zero!,:zero), (:one!,:one))
+    @eval function ($fname){T}(a::AbstractArray{T})
+        for i in 1:length(a)
+            a[i] = ($felt)(T)
+        end
+    end
+end
+
+
 function eye(T::Type, m::Integer, n::Integer)
     a = zeros(T,m,n)
     for i = 1:min(m,n)
